@@ -39,7 +39,10 @@ class JMDict:
             kanji = entry.find("keb")
             if(kanji is not None):
                 kanji = kanji.text
-                self.kanji_index[kanji] = entry_num
+                if(kanji in self.kanji_index):
+                    self.kanji_index[kanji].append(entry_num)
+                else:
+                    self.kanji_index[kanji] = [ entry_num ]
             self.entries[entry_num] = JMEntry(entry_num, kanji=kanji, readings=readings, definitions=definitions)
             # print(entry)
         #     try:
@@ -87,7 +90,7 @@ class JMDict:
 
     def search(self, kanji):
         if(kanji in self.kanji_index):
-            return self.entries[self.kanji_index[kanji]]
+            return [self.entries[entry] for entry in self.kanji_index[kanji]]
             # print(self.entries[kanji])
         else:
             return None
