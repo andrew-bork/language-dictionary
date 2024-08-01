@@ -43,6 +43,13 @@ class JMDict:
                     self.kanji_index[kanji].append(entry_num)
                 else:
                     self.kanji_index[kanji] = [ entry_num ]
+            for reading in readings:
+
+                if(reading is not None):
+                    if(reading in self.kanji_index):
+                        self.kanji_index[reading].append(entry_num)
+                    else:
+                        self.kanji_index[reading] = [ entry_num ]
             self.entries[entry_num] = JMEntry(entry_num, kanji=kanji, readings=readings, definitions=definitions)
             # print(entry)
         #     try:

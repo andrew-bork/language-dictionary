@@ -16,7 +16,7 @@ jp_dict = None
 async def lifespan(app: FastAPI):
     # Load
     global jp_dict
-    jp_dict = JMDict.JMDict("../lyrics-scraper/data/JMdict_e.xml")
+    jp_dict = JMDict.JMDict("../scraper/data/JMdict_e.xml")
     yield
     # Deload
     jp_dict = None
