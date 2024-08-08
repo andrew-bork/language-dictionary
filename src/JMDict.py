@@ -4,17 +4,26 @@ import logging
 import time
 # import romkan
 import MeCab
+import re
 
 logger = logging.getLogger(__name__)
 coloredlogs.install()
 
 
-class JMEntry:
-    def __init__(self, id, kanji=None, readings=None, definitions=None ):
-        self.id = id
-        self.kanji = kanji
-        self.readings = readings
+class JMSense:
+    def __init__(self, pos=[], definitions=[], misc=[]):
+        self.pos = pos
         self.definitions = definitions
+        self.misc = misc
+
+class JMEntry:
+    def __init__(self, id, kanjis=[], senses=[], readings=[]):
+        self.id = id
+        self.kanjis = kanjis
+        self.senses = senses
+        self.readings = readings
+        # self.definitions = definitions
+        # self.pos = pos
 
 class JMDict:
     def __init__(self, filepath):
@@ -26,31 +35,48 @@ class JMDict:
         start = time.perf_counter()
         logging.info("Loading dictionary...")
         with open(self.filepath, "r", encoding="utf-8") as file:
-            root = BeautifulSoup(file.read(), "xml")
+            root = BeautifulSoup(file.read().replace("&","&amp;"), "xml")
             # root = ET.parse(file)
 
         self.entries = {}
-        self.kanji_index = {}
+        self.index = {}
         for entry in root.find_all("entry"):
             entry_num = int(entry.find("ent_seq").text)
             readings = [ ele.find("reb").text for ele in entry.find_all("r_ele")]
-            sense_element = entry.find("sense")
-            definitions = [ele.text for ele in sense_element.find_all("gloss")]
-            kanji = entry.find("keb")
-            if(kanji is not None):
-                kanji = kanji.text
-                if(kanji in self.kanji_index):
-                    self.kanji_index[kanji].append(entry_num)
-                else:
-                    self.kanji_index[kanji] = [ entry_num ]
-            for reading in readings:
+            # sense_element = entry.find("sense")
 
-                if(reading is not None):
-                    if(reading in self.kanji_index):
-                        self.kanji_index[reading].append(entry_num)
-                    else:
-                        self.kanji_index[reading] = [ entry_num ]
-            self.entries[entry_num] = JMEntry(entry_num, kanji=kanji, readings=readings, definitions=definitions)
+            kanjis = [ ele.text for ele in entry.find_all("keb") ]
+
+            senses = [ 
+                JMSense(
+                    definitions=[
+                        ele.text for ele in sense.find_all("gloss")
+                    ], 
+                    pos=[ 
+                        ele.text for ele in sense.find_all("pos") 
+                    ],
+                    misc=[
+                        ele.text for ele in sense.find_all("misc") 
+                    ]) 
+                for sense in entry.find_all("sense")
+            ]
+          
+            # has_priority = entry.find("ke_pri")
+
+
+            for kanji in kanjis:
+                if(kanji in self.index):
+                    self.index[kanji].append(entry_num)
+                else:
+                    self.index[kanji] = [ entry_num ]
+            for reading in readings:
+                if(reading in self.index):
+                    self.index[reading].append(entry_num)
+                else:
+                    self.index[reading] = [ entry_num ]
+            
+
+            self.entries[entry_num] = JMEntry(entry_num, kanjis=kanjis, readings=readings, senses=senses)
             # print(entry)
         #     try:
         #         kanji_ele = entry.find("k_ele")
@@ -76,7 +102,7 @@ class JMDict:
                 
                 # print(kanji_ele.find("keb").text + " - (" + hiragana + " " + romaji + ") - " + gloss_ele.text)
 
-        self.tokenizer = MeCab.Tagger("")
+        # self.tokenizer = MeCab.Tagger("")
 
         elapsed = time.perf_counter() - start
         logging.info("Dictionary Loaded. Took %ds.", elapsed)
@@ -96,8 +122,8 @@ class JMDict:
 
 
     def search(self, kanji):
-        if(kanji in self.kanji_index):
-            return [self.entries[entry] for entry in self.kanji_index[kanji]]
+        if(kanji in self.index):
+            return [self.entries[entry] for entry in self.index[kanji]]
             # print(self.entries[kanji])
         else:
             return None
